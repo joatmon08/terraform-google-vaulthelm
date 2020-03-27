@@ -17,7 +17,7 @@ resource "kubernetes_secret" "vault_google_credentials" {
   data = {
     json = base64decode(google_service_account_key.vault.private_key)
   }
-  
+
   depends_on = [kubernetes_namespace.vault]
 }
 
@@ -28,11 +28,11 @@ resource "helm_release" "vault" {
   wait      = false
   values = [
     templatefile("${path.module}/values.yml", {
-      bucket    = google_storage_bucket.vault.name
-      project   = var.project
-      region    = var.region
-      keyring   = google_kms_key_ring.vault.name
-      key       = google_kms_crypto_key.vault-init.name
+      bucket  = google_storage_bucket.vault.name
+      project = var.project
+      region  = var.region
+      keyring = google_kms_key_ring.vault.name
+      key     = google_kms_crypto_key.vault-init.name
       }
     )
   ]
