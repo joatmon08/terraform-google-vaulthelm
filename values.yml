@@ -1,0 +1,85 @@
+server:
+  extraEnvironmentVars:
+    GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/gcs-bucket-credentials/json
+
+  extraVolumes:
+    - type: secret
+      name: gcs-bucket-credentials
+      path: /vault/userconfig
+
+  # Enables a headless service to be used by the Vault Statefulset
+  service:
+    enabled: true
+    # clusterIP controls whether a Cluster IP address is attached to the
+    # Vault service within Kubernetes.  By default the Vault service will
+    # be given a Cluster IP address, set to None to disable.  When disabled
+    # Kubernetes will create a "headless" service.  Headless services can be
+    # used to communicate with pods directly through DNS instead of a round robin
+    # load balancer.
+    # clusterIP: None
+
+    # Configures the service type for the main Vault service.  Can be ClusterIP
+    # or NodePort.
+    #type: ClusterIP
+
+    # If type is set to "NodePort", a specific nodePort value can be configured,
+    # will be random if left blank.
+    #nodePort: 30000
+
+    # Port on which Vault server is listening
+    port: 8200
+    # Target port to which the service should be mapped to
+    targetPort: 8200
+    # Extra annotations for the service definition
+    annotations: {}
+
+  # This configures the Vault Statefulset to create a PVC for data
+  # storage when using the file backend.
+  # See https://www.vaultproject.io/docs/configuration/storage/index.html to know more
+  dataStorage:
+    enabled: false
+
+  # Run Vault in "standalone" mode. This is the default mode that will deploy if
+  # no arguments are given to helm. This requires a PVC for data storage to use
+  # the "file" backend.  This mode is not highly available and should not be scaled
+  # past a single replica.
+  standalone:
+    enabled: false
+
+  ha:
+    enabled: true
+
+    # config is a raw string of default configuration when using a Stateful
+    # deployment. Default is to use a PersistentVolumeClaim mounted at /vault/data
+    # and store data there. This is only used when using a Replica count of 1, and
+    # using a stateful set. This should be HCL.
+    config: |
+      ui = true
+      cluster_addr = "https://POD_IP:8201"
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+  
+      storage "gcs" {
+        bucket = "${bucket}"
+      }
+
+      seal "gcpckms" {
+        credentials = "/vault/userconfig/gcs-bucket-credentials/json"
+        project     = "${project}"
+        region      = "${region}"
+        key_ring    = "${keyring}"
+        crypto_key  = "${key}"
+      }
+
+ui:
+  enabled: true
+  serviceType: "LoadBalancer"
+  serviceNodePort: null
+  externalPort: 8200
+
+  loadBalancerSourceRanges:
+    - 0.0.0.0/0
