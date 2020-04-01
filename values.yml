@@ -64,7 +64,8 @@ server:
       }
   
       storage "gcs" {
-        bucket = "${bucket}"
+        bucket     = "${bucket}"
+        ha_enabled = "true"
       }
 
       seal "gcpckms" {
